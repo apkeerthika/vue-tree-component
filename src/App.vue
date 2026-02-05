@@ -1,30 +1,34 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import TreeView from './components/TreeView.vue';
+import type { TreeNode } from './types/TreeNode';
+
+const sampleData: TreeNode[] = [
+    {
+        id: '1',
+        label: 'Electronics',
+        children: [
+            {
+                id: '1-1',
+                label: 'Phones',
+                children: [
+                    { id: '1-1-1', label: 'iPhone' },
+                    { id: '1-1-2', label: 'Samsung' }
+                ]
+            },
+            { id: '1-2', label: 'Laptops' }
+        ]
+    },
+    {
+        id: '2',
+        label: 'Books'
+    }
+];
 </script>
 
-<template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+<template lang="pug">
+  TreeView(:nodes="sampleData" :showCheckbox="true" selectionMode="multiple")
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
+
 </style>
