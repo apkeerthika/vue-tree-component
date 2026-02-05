@@ -8,8 +8,13 @@ defineOptions({
 
 const props = defineProps<{
     nodes: TreeNode[];
+    selectedKeys: string[]
     showCheckbox: boolean;
     selectionMode: 'single' | 'multiple';
+}>()
+
+const emit = defineEmits<{
+  (e: 'toggle-select', id: string): void
 }>()
 
 const expandedKeys = ref<Set<string>>(new Set())
@@ -22,19 +27,29 @@ function toggleExpand(id: string) {
     expandedKeys.value.add(id)
   }
 }
+
+
 </script>
 
 <template lang="pug">
 ul.tree
     li(v-for="node in props.nodes" :key="node.id")
-        span(@click="toggleExpand(node.id)") {{ node.label }}
-
+        .node-row
+            span.toggle(v-if="node.children" @click="toggleExpand(node.id)")
+                | {{ expandedKeys.has(node.id) ? '📂' : '📁' }}
+            span.icon(v-else)
+                | 📄
+            span.label| {{ node.label }}
+            input(v-if="props.showCheckbox && !node.children" type="checkbox" @change="emit('toggle-select', node.id)" :checked="props.selectedKeys.includes(node.id)")
 
         TreeView(
             v-if="node.children && expandedKeys.has(node.id)"
+            :key="node.id"
             :nodes="node.children"
+            :selectedKeys="props.selectedKeys"
             :showCheckbox="props.showCheckbox"
             :selectionMode="props.selectionMode"
+            @toggle-select="emit('toggle-select', $event)"
         )
 
 </template>
@@ -55,6 +70,11 @@ ul.tree
   cursor: pointer;
   font-weight: bold;
   width: 16px;
+  display: inline-block;
+}
+
+.icon {
+  width: 20px;
   display: inline-block;
 }
 

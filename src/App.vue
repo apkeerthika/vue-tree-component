@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import TreeView from './components/TreeView.vue';
 import type { TreeNode } from './types/TreeNode';
 
@@ -23,10 +24,26 @@ const sampleData: TreeNode[] = [
         label: 'Books'
     }
 ];
+
+const selectedKeys = ref<string[]>([])
+
+function onToggleSelect(id: string) {
+  const index = selectedKeys.value.indexOf(id)
+
+  if (index > -1) {
+    selectedKeys.value.splice(index, 1)
+  } else {
+    selectedKeys.value.push(id)
+  }
+}
+
 </script>
 
 <template lang="pug">
-  TreeView(:nodes="sampleData" :showCheckbox="true" selectionMode="multiple")
+  TreeView(:nodes="sampleData" :showCheckbox="true" selectionMode="multiple" :selectedKeys="selectedKeys"  @toggle-select="onToggleSelect")
+  p Selected IDs:
+    ul
+     li(v-for="id in selectedKeys" :key="id") {{ id }}
 </template>
 
 <style scoped>
