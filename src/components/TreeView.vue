@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import type { TreeNode } from '@/types/TreeNode';
 
 defineOptions({
@@ -8,25 +7,16 @@ defineOptions({
 
 const props = defineProps<{
     nodes: TreeNode[];
-    selectedKeys: string[]
+    selectedKeys: string[],
+    expandedKeys: Set<string>
     showCheckbox: boolean;
     selectionMode: 'single' | 'multiple';
 }>()
 
 const emit = defineEmits<{
+  (e: 'toggle-expand', id: string): void
   (e: 'toggle-select', id: string): void
 }>()
-
-const expandedKeys = ref<Set<string>>(new Set())
-
-
-function toggleExpand(id: string) {
-  if (expandedKeys.value.has(id)) {
-    expandedKeys.value.delete(id)
-  } else {
-    expandedKeys.value.add(id)
-  }
-}
 
 
 </script>
@@ -35,21 +25,28 @@ function toggleExpand(id: string) {
 ul.tree
     li(v-for="node in props.nodes" :key="node.id")
         .node-row
-            span.toggle(v-if="node.children" @click="toggleExpand(node.id)")
+            span.toggle(v-if="node._originalChildren && node._originalChildren.length > 0" @click="emit('toggle-expand', node.id)")
                 | {{ expandedKeys.has(node.id) ? '📂' : '📁' }}
             span.icon(v-else)
                 | 📄
             span.label| {{ node.label }}
-            input(v-if="props.showCheckbox && !node.children" type="checkbox" @change="emit('toggle-select', node.id)" :checked="props.selectedKeys.includes(node.id)")
+            input(
+              v-if="props.showCheckbox && (!node._originalChildren || node._originalChildren.length === 0)" 
+              type="checkbox" 
+              @change="emit('toggle-select', node.id)" 
+              :checked="props.selectedKeys.includes(node.id)"
+            )
 
         TreeView(
-            v-if="node.children && expandedKeys.has(node.id)"
+            v-if="node._originalChildren && node._originalChildren.length > 0 && expandedKeys.has(node.id)"
             :key="node.id"
             :nodes="node.children"
             :selectedKeys="props.selectedKeys"
+            :expandedKeys="props.expandedKeys"
             :showCheckbox="props.showCheckbox"
             :selectionMode="props.selectionMode"
             @toggle-select="emit('toggle-select', $event)"
+            @toggle-expand="emit('toggle-expand', $event)"
         )
 
 </template>

@@ -5,6 +5,7 @@ export interface TreeNode {
     label: string;
     // Child nodes
     children?: TreeNode[];
+    _originalChildren?: TreeNode[];
     // Whether the node is expanded
     expanded?: boolean;
     // Whether the node is selected
