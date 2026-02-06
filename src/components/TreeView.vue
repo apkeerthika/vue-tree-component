@@ -11,6 +11,7 @@ const props = defineProps<{
     expandedKeys: Set<string>
     showCheckbox: boolean;
     selectionMode: 'single' | 'multiple';
+    searchText: string
 }>()
 
 const emit = defineEmits<{
@@ -18,18 +19,24 @@ const emit = defineEmits<{
   (e: 'toggle-select', id: string): void
 }>()
 
+function highlightMatch(label: string, query: string) {
+  if (!query) return label
+  const regex = new RegExp(`(${query.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi')
+  return label.replace(regex, '<span class="highlight">$1</span>')
+}
+
 
 </script>
 
 <template lang="pug">
 ul.tree
-    li(v-for="node in props.nodes" :key="node.id")
+    li(v-for="node in props.nodes" :key="node.id" :class="{ highlight: searchText && node.label.toLowerCase().includes(searchText.toLowerCase()) }")
         .node-row
             span.toggle(v-if="node._originalChildren && node._originalChildren.length > 0" @click="emit('toggle-expand', node.id)")
                 | {{ expandedKeys.has(node.id) ? '📂' : '📁' }}
             span.icon(v-else)
                 | 📄
-            span.label| {{ node.label }}
+            span.label(v-html="highlightMatch(node.label, searchText)")
             input(
               v-if="props.showCheckbox && (!node._originalChildren || node._originalChildren.length === 0)" 
               type="checkbox" 
@@ -45,6 +52,7 @@ ul.tree
             :expandedKeys="props.expandedKeys"
             :showCheckbox="props.showCheckbox"
             :selectionMode="props.selectionMode"
+            :searchText="props.searchText"
             @toggle-select="emit('toggle-select', $event)"
             @toggle-expand="emit('toggle-expand', $event)"
         )
@@ -52,9 +60,10 @@ ul.tree
 </template>
 
 <style scoped>
+ul.tree ul.tree { margin-left: 20px; /* nested levels get extra margin */ }
 .tree {
   list-style: none;
-  padding-left: 16px;
+  padding: 0;
 }
 
 .node-row {
@@ -78,4 +87,7 @@ ul.tree
 .label {
   cursor: default;
 }
+
+li.highlight .node-row { background-color: #f0f0f0; border-radius: 4px; padding: 3px; } 
+.label .highlight { background-color: yellow; font-weight: bold; border-radius: 4px; padding: 2px; }
 </style>

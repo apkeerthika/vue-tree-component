@@ -121,25 +121,71 @@ function onToggleExpand(id: string) {
 </script>
 
 <template lang="pug">
+div.search-wrapper
   input(
     type="text"
     placeholder="Search..."
     v-model="searchText"
   )
-  TreeView(
-    :nodes="filteredNodes" 
-    :showCheckbox="true" 
-    selectionMode="multiple" 
-    :selectedKeys="selectedKeys"
-    :expandedKeys="effectiveExpandedKeys"  
-    @toggle-select="onToggleSelect"
-    @toggle-expand="onToggleExpand"
-  )
-  p Selected IDs:
-    ul
-      li(v-for="id in selectedKeys" :key="id") {{ id }}
+  button.clear-btn(@click="searchText = ''") ✕
+TreeView(
+  :nodes="filteredNodes" 
+  :showCheckbox="true" 
+  selectionMode="multiple" 
+  :selectedKeys="selectedKeys"
+  :expandedKeys="effectiveExpandedKeys" 
+  :searchText="searchText" 
+  @toggle-select="onToggleSelect"
+  @toggle-expand="onToggleExpand"
+)
+p Selected IDs:
+  ul
+    li(v-for="id in selectedKeys" :key="id") {{ id }}
 </template>
 
 <style scoped>
+.search-wrapper {
+  position: relative; 
+  margin-bottom: 16px;
+  display: flex;
+}
 
+.search-wrapper input {
+  width: 100%;
+  padding: 8px 32px 8px 12px; /* extra right padding for button */
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.search-wrapper input:focus {
+  border-color: #4f46e5; /* Indigo */
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #999;
+  padding: 0;
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  text-align: center;
+  box-shadow: 0 0 0 1px #ccc inset;
+}
+
+.clear-btn:hover {
+  background: #f3f4f6; /* light hover */
+  color: #333;
+}
 </style>
