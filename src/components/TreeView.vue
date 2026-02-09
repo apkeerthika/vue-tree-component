@@ -25,6 +25,28 @@ function highlightMatch(label: string, query: string) {
   return label.replace(regex, '<span class="highlight">$1</span>')
 }
 
+function onCheckboxChange(node: TreeNode) {
+  if (props.selectionMode === 'single') {
+    emit('toggle-select', node.id)
+  } else {
+    const index = props.selectedKeys.indexOf(node.id)
+    if (index > -1) props.selectedKeys.splice(index, 1)
+    else props.selectedKeys.push(node.id)
+  }
+}
+
+function isIndeterminate(node: TreeNode): boolean { 
+  if (!node._originalChildren || node._originalChildren.length === 0) return false
+  const childIds = collectChildIds(node) 
+  const selectedChildren = childIds.filter(id => props.selectedKeys.includes(id))
+  return selectedChildren.length > 0 && selectedChildren.length < childIds.length 
+}
+
+function collectChildIds(node: TreeNode): string[] {
+  if (!node._originalChildren || node._originalChildren.length === 0) return []
+  return node._originalChildren.flatMap(child => [child.id, ...collectChildIds(child)])
+}
+
 
 </script>
 
@@ -38,10 +60,11 @@ ul.tree
                 | 📄
             span.label(v-html="highlightMatch(node.label, searchText)")
             input(
-              v-if="props.showCheckbox && (!node._originalChildren || node._originalChildren.length === 0)" 
+              v-if="props.showCheckbox" 
               type="checkbox" 
-              @change="emit('toggle-select', node.id)" 
+              @change="emit('toggle-select', node.id, $event.target.checked)"
               :checked="props.selectedKeys.includes(node.id)"
+              :indeterminate="isIndeterminate(node)"
             )
 
         TreeView(

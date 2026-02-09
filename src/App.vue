@@ -105,10 +105,59 @@ const effectiveExpandedKeys = computed(() =>
   searchText.value ? searchExpandedKeys.value : manualExpandedKeys.value
 )
 
-function onToggleSelect(id: string) {
-  const index = selectedKeys.value.indexOf(id)
-  if (index > -1) selectedKeys.value.splice(index, 1)
-  else selectedKeys.value.push(id)
+function onToggleSelect(id: string, checked: boolean) {
+  const node = findNodeById(enrichedSampleData, id) 
+  if (!node) return 
+  if (checked) { 
+    selectNode(node)
+  } else { 
+    deselectNode(node)
+  }
+  updateParentSelection(enrichedSampleData)
+}
+
+function updateParentSelection(nodes: TreeNode[]) { 
+  for (const node of nodes) { 
+    if (node._originalChildren && node._originalChildren.length > 0) { 
+      updateParentSelection(node._originalChildren)
+      const childIds = collectChildIds(node) 
+      const selectedChildren = childIds.filter(id => selectedKeys.value.includes(id)) 
+      if (selectedChildren.length === 0) { 
+        selectedKeys.value = selectedKeys.value.filter(key => key !== node.id) 
+      } else if (selectedChildren.length === childIds.length) { 
+        if (!selectedKeys.value.includes(node.id)) selectedKeys.value.push(node.id) 
+      } else {
+        if (!selectedKeys.value.includes(node.id)) selectedKeys.value.push(node.id) 
+      } 
+    }
+  } 
+}
+
+function collectChildIds(node: TreeNode): string[] {
+  if (!node._originalChildren || node._originalChildren.length === 0) return []
+  return node._originalChildren.flatMap(child => [child.id, ...collectChildIds(child)])
+}
+
+function selectNode(node: TreeNode) { 
+  if (!selectedKeys.value.includes(node.id)) {
+    selectedKeys.value.push(node.id)
+  } 
+  node._originalChildren?.forEach(child => selectNode(child)) 
+}
+function deselectNode(node: TreeNode) { 
+  selectedKeys.value = selectedKeys.value.filter(key => key !== node.id) 
+  node._originalChildren?.forEach(child => deselectNode(child)) 
+}
+
+function findNodeById(nodes: TreeNode[], id: string): TreeNode | null { 
+  for (const node of nodes) { 
+    if (node.id === id) return node 
+    if (node._originalChildren) {
+       const found = findNodeById(node._originalChildren, id) 
+       if (found) return found 
+    } 
+  } 
+  return null 
 }
 
 function onToggleExpand(id: string) {

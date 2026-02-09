@@ -10,4 +10,5 @@ export interface TreeNode {
     expanded?: boolean;
     // Whether the node is selected
     selected?: boolean;
+    indeterminate?: boolean;
 }
