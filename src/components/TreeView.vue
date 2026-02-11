@@ -1,92 +1,65 @@
 <script setup lang="ts">
 import type { TreeNode } from '@/types/TreeNode';
+import { isExpanded, isChecked, hasChildren } from '@/components/treeHelpers';
 
-defineOptions({
-  name: 'TreeView'
-})
+defineOptions({ name: 'TreeView'})
 
 const props = defineProps<{
-    nodes: TreeNode[];
-    selectedKeys: string[],
-    expandedKeys: Set<string>
-    showCheckbox: boolean;
-    selectionMode: 'single' | 'multiple';
-    searchText: string
+  nodes: TreeNode[],
+  expandedKeys: string[],
+  selectedKeys: string[],
+  showCheckbox: boolean,
+  searchText?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'toggle-expand', id: string): void
-  (e: 'toggle-select', id: string): void
+  'toggle-expand': [id: string],
+  'toggle-select': [id: string, checked: boolean]
 }>()
 
-function highlightMatch(label: string, query: string) {
-  if (!query) return label
-  const regex = new RegExp(`(${query.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi')
-  return label.replace(regex, '<span class="highlight">$1</span>')
+function onExpand(node: TreeNode) {
+  emit('toggle-expand', node.id)
 }
 
-function onCheckboxChange(node: TreeNode) {
-  if (props.selectionMode === 'single') {
-    emit('toggle-select', node.id)
-  } else {
-    const index = props.selectedKeys.indexOf(node.id)
-    if (index > -1) props.selectedKeys.splice(index, 1)
-    else props.selectedKeys.push(node.id)
-  }
+function onCheck(node: TreeNode, e:Event) {
+  const target = e.target as HTMLInputElement
+  emit('toggle-select', node.id, target.checked)
 }
-
-function isIndeterminate(node: TreeNode): boolean { 
-  if (!node._originalChildren || node._originalChildren.length === 0) return false
-  const childIds = collectChildIds(node) 
-  const selectedChildren = childIds.filter(id => props.selectedKeys.includes(id))
-  return selectedChildren.length > 0 && selectedChildren.length < childIds.length 
-}
-
-function collectChildIds(node: TreeNode): string[] {
-  if (!node._originalChildren || node._originalChildren.length === 0) return []
-  return node._originalChildren.flatMap(child => [child.id, ...collectChildIds(child)])
-}
-
 
 </script>
 
 <template lang="pug">
 ul.tree
-    li(v-for="node in props.nodes" :key="node.id" :class="{ highlight: searchText && node.label.toLowerCase().includes(searchText.toLowerCase()) }")
-        .node-row
-            span.toggle(v-if="node._originalChildren && node._originalChildren.length > 0" @click="emit('toggle-expand', node.id)")
-                | {{ expandedKeys.has(node.id) ? '📂' : '📁' }}
-            span.icon(v-else)
-                | 📄
-            span.label(v-html="highlightMatch(node.label, searchText)")
-            input(
-              v-if="props.showCheckbox" 
-              type="checkbox" 
-              @change="emit('toggle-select', node.id, $event.target.checked)"
-              :checked="props.selectedKeys.includes(node.id)"
-              :indeterminate="isIndeterminate(node)"
-            )
+  li(v-for="node in nodes || []" :key="node.id")
+    .node-row
+      slot(name="togglerIcon" :node="node" :expanded="isExpanded(node.id, expandedKeys)" :toggle="() => onExpand(node)")
+        span.toggle(@click="onExpand(node)") {{ isExpanded(node.id, expandedKeys) ? '-' : '+' }}
 
-        TreeView(
-            v-if="node._originalChildren && node._originalChildren.length > 0 && expandedKeys.has(node.id)"
-            :key="node.id"
-            :nodes="node.children"
-            :selectedKeys="props.selectedKeys"
-            :expandedKeys="props.expandedKeys"
-            :showCheckbox="props.showCheckbox"
-            :selectionMode="props.selectionMode"
-            :searchText="props.searchText"
-            @toggle-select="emit('toggle-select', $event)"
-            @toggle-expand="emit('toggle-expand', $event)"
-        )
-
+      input(v-if="showCheckbox" type="checkbox" :checked="isChecked(node.id, selectedKeys)" @change="onCheck(node, $event)")
+      slot(name="nodeLabel" :node="node")
+        span {{ node.label }}
+    TreeView(
+      v-if="hasChildren(node) && isExpanded(node.id, expandedKeys)"
+      :nodes="node.children"
+      :expandedKeys="expandedKeys"
+      :selectedKeys="selectedKeys"
+      :showCheckbox="showCheckbox"
+      :searchText="searchText"
+      @toggle-expand="id => emit('toggle-expand', id)"
+      @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
+    )
 </template>
 
 <style scoped>
-ul.tree ul.tree { margin-left: 20px; /* nested levels get extra margin */ }
-.tree {
+.tree,
+.tree ul {
   list-style: none;
-  padding: 0;
+  padding-left: 0;
+  margin: 0;
+}
+
+ul.tree ul.tree {
+  margin-left: 20px;
 }
 
 .node-row {
@@ -97,20 +70,7 @@ ul.tree ul.tree { margin-left: 20px; /* nested levels get extra margin */ }
 
 .toggle {
   cursor: pointer;
-  font-weight: bold;
   width: 16px;
   display: inline-block;
 }
-
-.icon {
-  width: 20px;
-  display: inline-block;
-}
-
-.label {
-  cursor: default;
-}
-
-li.highlight .node-row { background-color: #f0f0f0; border-radius: 4px; padding: 3px; } 
-.label .highlight { background-color: yellow; font-weight: bold; border-radius: 4px; padding: 2px; }
 </style>
