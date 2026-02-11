@@ -57,3 +57,12 @@ export  function findNodeById(nodes: TreeNode[], id: string): TreeNode | null {
   }
   return null
 }
+
+/* check if node is partially checked */
+export function isPartiallyChecked(node: TreeNode, selectedKeys: string[]): boolean {
+  if (!node.children || node.children.length === 0) return false
+  const descendantIds = collectDescendantIds(node)
+  if (descendantIds.length === 0) return false
+  const checkedCount = descendantIds.filter(id => selectedKeys.includes(id)).length
+  return checkedCount > 0 && checkedCount < descendantIds.length
+}
