@@ -2,6 +2,7 @@
 import type { TreeNode } from '@/types/TreeNode';
 import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked, isPartiallyChecked } from '@/components/treeHelpers';
 import { vIndeterminate } from '@/directives/indeterminate';
+import { computed } from 'vue';
 
 defineOptions({ name: 'TreeView'})
 
@@ -10,8 +11,11 @@ const props = defineProps<{
   expandedKeys: string[],
   selectedKeys: string[],
   showCheckbox: boolean,
-  searchText?: string
+  searchText?: string,
+  expandOnClick?: boolean
 }>()
+
+const expandOnClick = computed(() => props.expandOnClick ?? false)
 
 const emit = defineEmits<{
   'toggle-expand': [id: string],
@@ -25,6 +29,13 @@ function onExpand(node: TreeNode) {
 function onCheck(node: TreeNode, e:Event) {
   const target = e.target as HTMLInputElement
   emit('toggle-select', node.id, target.checked)
+}
+
+function onLabelClick(node: TreeNode) {
+  if (!expandOnClick.value) return
+  if (!hasChildren(node)) return
+
+  emit('toggle-expand', node.id)
 }
 
 </script>
@@ -43,18 +54,24 @@ ul.tree
         v-indeterminate="isPartiallyChecked(node, selectedKeys)"
         @change="onCheck(node, $event)"
       )
-      slot(name="nodeLabel" :node="node")
-        span {{ node.label }}
+      slot(name="nodeLabel" :node="node" :onLabelClick="() => onLabelClick(node)" :clickable="expandOnClick && hasChildren(node)")
+        span(@click="onLabelClick(node)" :style="{ cursor: expandOnClick ? 'pointer' : 'default' }") {{ node.label }}
     TreeView(
       v-if="hasChildren(node) && isExpanded(node.id, expandedKeys)"
       :nodes="node.children"
       :expandedKeys="expandedKeys"
       :selectedKeys="selectedKeys"
       :showCheckbox="showCheckbox"
+      :expandOnClick="expandOnClick"
       :searchText="searchText"
       @toggle-expand="id => emit('toggle-expand', id)"
       @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
     )
+      template(#togglerIcon="slotProps")
+        slot(name="togglerIcon" v-bind="slotProps")
+
+      template(#nodeLabel="slotProps")
+        slot(name="nodeLabel" v-bind="slotProps") 
 </template>
 
 <style scoped>

@@ -53,14 +53,15 @@ function toggleSelect(id: string, checked: boolean) {
     :expandedKeys="expandedKeys"
     :selectedKeys="selectedKeys"
     :showCheckbox="true"
+    :expandOnClick="true"
     @toggle-expand="toggleExpand"
     @toggle-select="toggleSelect"
   )
     template(#togglerIcon="{ node, expanded, toggle }")
       span.toggle(@click="toggle") {{ expanded ? '−' : '+' }}
 
-    template(#nodeLabel="{ node }")
-      span {{ node.label }}
+    template(#nodeLabel="{ node, onLabelClick, clickable }")
+      span(@click="onLabelClick" :style="{ cursor: clickable ? 'pointer' : 'default' }") {{ node.label }}
 
 </template>
 
