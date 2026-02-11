@@ -19,15 +19,20 @@ export function hasChildren(node?: TreeNode): boolean {
 }
 
 export function collectDescendantIds(node: TreeNode): string[] {
-  if (!node.children) {
-    return []
-  }
-  return node.children.flatMap(child => [child.id, ...collectDescendantIds(child)])
+  if (!node.children) return []
+
+  return node.children.flatMap(child => {
+    if (child.skipInheritance) return []
+    return [
+      child.id,
+      ...collectDescendantIds(child)
+    ]
+  })
 }
 
 /* check if node is indeterminate */
 export function isIndeterminate(node: TreeNode, selectedKeys: string[]): boolean {
-  if (!node.children || node.children.length === 0) return false
+  if (!node.children || node.skipInheritance) return false
   const childIds = collectDescendantIds(node)
   const selectedCount = childIds.filter(id => selectedKeys.includes(id)).length
   return selectedCount > 0 && selectedCount < childIds.length
@@ -35,7 +40,7 @@ export function isIndeterminate(node: TreeNode, selectedKeys: string[]): boolean
 
 /* check if node is fully checked */
 export function isFullyChecked(node: TreeNode, selectedKeys: string[]): boolean {
-  if (!node.children || node.children.length === 0) {
+  if (!node.children || node.skipInheritance) {
     return selectedKeys.includes(node.id)
   }
   const childIds = collectDescendantIds(node)

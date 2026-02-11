@@ -15,11 +15,12 @@ export const treeData: TreeNode[] = [
             },
             {
                 id: '1-2',
-                label: 'Personal',
+                label: 'Personal (no inheritance)',
                 children: [
                     { id: '1-2-1', label: 'Photos' },
                     { id: '1-2-2', label: 'Videos' }
-                ]
+                ],
+                skipInheritance: true
             }
         ]
     },

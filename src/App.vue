@@ -22,10 +22,18 @@ function toggleExpand(id: string) {
 function toggleSelect(id: string, checked: boolean) {
   const node = findNodeById(nodes.value, id)
   if (!node) return
-  const ids = [
-    id,
-    ...collectDescendantIds(node)
-  ]
+
+  if (node.skipInheritance) {
+    if (checked && !selectedKeys.value.includes(id)) {
+      selectedKeys.value.push(id)
+    } else if (!checked && selectedKeys.value.includes(id)) {
+      selectedKeys.value = selectedKeys.value.filter(k => k !== id)
+    }
+    return
+  }
+
+  const descendantIds = collectDescendantIds(node)
+  const ids = [id, ...descendantIds]
   if (checked) {
     ids.forEach(i => {
       if(!selectedKeys.value.includes(i)) {

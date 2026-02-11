@@ -5,4 +5,5 @@ export interface TreeNode {
     label: string;
     // Child nodes
     children?: TreeNode[];
+    skipInheritance?: boolean;
 }
