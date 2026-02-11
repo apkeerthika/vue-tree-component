@@ -60,8 +60,8 @@ function toggleSelect(id: string, checked: boolean) {
     template(#togglerIcon="{ node, expanded, toggle }")
       span.toggle(@click="toggle") {{ expanded ? '−' : '+' }}
 
-    template(#nodeLabel="{ node, onLabelClick, clickable }")
-      span(@click="onLabelClick" :style="{ cursor: clickable ? 'pointer' : 'default' }") {{ node.label }}
+    template(#nodeLabel="{ node }")
+      span {{ node.label }}
 
 </template>
 

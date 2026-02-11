@@ -2,7 +2,6 @@
 import type { TreeNode } from '@/types/TreeNode';
 import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked, isPartiallyChecked } from '@/components/treeHelpers';
 import { vIndeterminate } from '@/directives/indeterminate';
-import { computed } from 'vue';
 
 defineOptions({ name: 'TreeView'})
 
@@ -12,10 +11,8 @@ const props = defineProps<{
   selectedKeys: string[],
   showCheckbox: boolean,
   searchText?: string,
-  expandOnClick?: boolean
 }>()
 
-const expandOnClick = computed(() => props.expandOnClick ?? false)
 
 const emit = defineEmits<{
   'toggle-expand': [id: string],
@@ -31,21 +28,31 @@ function onCheck(node: TreeNode, e:Event) {
   emit('toggle-select', node.id, target.checked)
 }
 
-function onLabelClick(node: TreeNode) {
-  if (!expandOnClick.value) return
+function onKeydown(e: KeyboardEvent, node: TreeNode) {
   if (!hasChildren(node)) return
 
-  emit('toggle-expand', node.id)
+  if (['Enter', ' '].includes(e.key)) {
+    e.preventDefault()
+    onExpand(node)
+  }
+
+  if (e.key === 'ArrowRight' && !isExpanded(node.id, props.expandedKeys)) {
+    onExpand(node)
+  }
+
+  if (e.key === 'ArrowLeft' && isExpanded(node.id, props.expandedKeys)) {
+    onExpand(node)
+  }
 }
+
 
 </script>
 
 <template lang="pug">
-ul.tree
-  li(v-for="node in nodes || []" :key="node.id")
-    .node-row
-      slot(name="togglerIcon" :node="node" :expanded="isExpanded(node.id, expandedKeys)" :toggle="() => onExpand(node)")
-        span.toggle(@click="onExpand(node)") {{ isExpanded(node.id, expandedKeys) ? '-' : '+' }}
+ul.tree(role="tree")
+  li(v-for="node in nodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, expandedKeys)")
+    .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
+      span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") {{ isExpanded(node.id, expandedKeys) ? '-' : '+' }}
 
       input(
         v-if="showCheckbox" 
@@ -54,15 +61,14 @@ ul.tree
         v-indeterminate="isPartiallyChecked(node, selectedKeys)"
         @change="onCheck(node, $event)"
       )
-      slot(name="nodeLabel" :node="node" :onLabelClick="() => onLabelClick(node)" :clickable="expandOnClick && hasChildren(node)")
-        span(@click="onLabelClick(node)" :style="{ cursor: expandOnClick ? 'pointer' : 'default' }") {{ node.label }}
+      slot(name="nodeLabel" :node="node")
+        span {{ node.label }}
     TreeView(
       v-if="hasChildren(node) && isExpanded(node.id, expandedKeys)"
       :nodes="node.children"
       :expandedKeys="expandedKeys"
       :selectedKeys="selectedKeys"
       :showCheckbox="showCheckbox"
-      :expandOnClick="expandOnClick"
       :searchText="searchText"
       @toggle-expand="id => emit('toggle-expand', id)"
       @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
@@ -75,26 +81,40 @@ ul.tree
 </template>
 
 <style scoped>
-.tree,
-.tree ul {
+.tree {
   list-style: none;
-  padding-left: 0;
+  padding: 0;
   margin: 0;
 }
 
-ul.tree ul.tree {
+.tree ul {
   margin-left: 20px;
 }
 
 .node-row {
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.node-row:hover {
+  background-color: #f3f4f6;
+}
+
+.node-row:focus {
+  outline: 2px solid #ebebeb;
 }
 
 .toggle {
   cursor: pointer;
   width: 16px;
-  display: inline-block;
+  text-align: center;
+  font-weight: bold;
+}
+
+.label {
+  cursor: default;
 }
 </style>
