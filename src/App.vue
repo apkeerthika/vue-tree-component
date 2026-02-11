@@ -3,6 +3,7 @@ import { ref} from 'vue'
 import TreeView from './components/TreeView.vue'
 import type { TreeNode } from './types/TreeNode'
 import { treeData } from './data/treeData'
+import { collectDescendantIds, findNodeById } from './components/treeHelpers'
 
 const nodes = ref<TreeNode[]>(treeData)
 
@@ -19,10 +20,20 @@ function toggleExpand(id: string) {
 }
 
 function toggleSelect(id: string, checked: boolean) {
-  if (checked && !selectedKeys.value.includes(id)) {
-    selectedKeys.value.push(id)
-  } else if (!checked) {
-    selectedKeys.value = selectedKeys.value.filter(k => k !== id)
+  const node = findNodeById(nodes.value, id)
+  if (!node) return
+  const ids = [
+    id,
+    ...collectDescendantIds(node)
+  ]
+  if (checked) {
+    ids.forEach(i => {
+      if(!selectedKeys.value.includes(i)) {
+        selectedKeys.value.push(i)
+      }
+    })
+  } else {
+    selectedKeys.value= selectedKeys.value.filter(k => !ids.includes(k))
   }
 }
 

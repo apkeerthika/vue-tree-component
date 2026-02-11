@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TreeNode } from '@/types/TreeNode';
-import { isExpanded, isChecked, hasChildren } from '@/components/treeHelpers';
+import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked } from '@/components/treeHelpers';
 
 defineOptions({ name: 'TreeView'})
 
@@ -35,7 +35,7 @@ ul.tree
       slot(name="togglerIcon" :node="node" :expanded="isExpanded(node.id, expandedKeys)" :toggle="() => onExpand(node)")
         span.toggle(@click="onExpand(node)") {{ isExpanded(node.id, expandedKeys) ? '-' : '+' }}
 
-      input(v-if="showCheckbox" type="checkbox" :checked="isChecked(node.id, selectedKeys)" @change="onCheck(node, $event)")
+      input(v-if="showCheckbox" type="checkbox" :checked="isFullyChecked(node, selectedKeys)" :indeterminate="isIndeterminate(node, selectedKeys)" @change="onCheck(node, $event)")
       slot(name="nodeLabel" :node="node")
         span {{ node.label }}
     TreeView(
