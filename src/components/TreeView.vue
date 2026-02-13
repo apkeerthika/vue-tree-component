@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import type { TreeNode } from '@/types/TreeNode';
-import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked, isPartiallyChecked } from '@/components/treeHelpers';
+import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked, isPartiallyChecked, filterTree, collectExpandedIds, highlightText } from '@/components/treeHelpers';
 import { vIndeterminate } from '@/directives/indeterminate';
 
 defineOptions({ name: 'TreeView'})
@@ -10,8 +11,13 @@ const props = defineProps<{
   expandedKeys: string[],
   selectedKeys: string[],
   showCheckbox: boolean,
-  searchText?: string,
+  filter?: boolean,
+  filterBy?: string | string[],
+  filterMode?: 'lenient' | 'strict'
+  isRoot?: boolean
 }>()
+
+const searchText = ref('')
 
 
 const emit = defineEmits<{
@@ -45,39 +51,76 @@ function onKeydown(e: KeyboardEvent, node: TreeNode) {
   }
 }
 
+const filteredNodes = computed<TreeNode[]>(() => {
+  if (!props.filter || !searchText.value.trim()) {
+    return props.nodes
+  }
+
+  return filterTree(props.nodes, searchText.value, {
+    filterBy: props.filterBy ?? 'label',
+    filterMode: props.filterMode ?? 'lenient'
+  })
+})
+
+const computedExpandedKeys = computed<string[]>(() => {
+  if (!searchText.value.trim()) {
+    return props.expandedKeys
+  }
+
+  return collectExpandedIds(filteredNodes.value)
+})
+
+const showNoResults = computed(() => {
+  return (
+    props.filter &&
+    searchText.value.trim().length > 0 &&
+    filteredNodes.value.length === 0
+  )
+})
+
 
 </script>
 
 <template lang="pug">
-ul.tree(role="tree")
-  li(v-for="node in nodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, expandedKeys)")
-    .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
-      span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") {{ isExpanded(node.id, expandedKeys) ? '-' : '+' }}
+.tree-wrapper
+  div.search-container(v-if="filter && isRoot")
+    input(type="text" placeholder="Search..." v-model="searchText")
+    svg.search-icon(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20")
+      path(d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z")
+  ul.tree(role="tree" v-if="!showNoResults")
+    li(v-for="node in filteredNodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
+      .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
+        span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") {{ isExpanded(node.id, computedExpandedKeys) ? '-' : '+' }}
 
-      input(
-        v-if="showCheckbox" 
-        type="checkbox" 
-        :checked="isFullyChecked(node, selectedKeys)" 
-        v-indeterminate="isPartiallyChecked(node, selectedKeys)"
-        @change="onCheck(node, $event)"
+        input(
+          v-if="showCheckbox" 
+          type="checkbox" 
+          :checked="isFullyChecked(node, selectedKeys)" 
+          v-indeterminate="isPartiallyChecked(node, selectedKeys)"
+          @change="onCheck(node, $event)"
+        )
+        slot(name="nodeLabel" :node="node")
+          span(v-html="highlightText(node.label, searchText)")
+      TreeView(
+        v-if="hasChildren(node) && isExpanded(node.id, computedExpandedKeys)"
+        :nodes="node.children"
+        :expandedKeys="computedExpandedKeys"
+        :selectedKeys="selectedKeys"
+        :showCheckbox="showCheckbox"
+        :filter="filter"
+        :filterBy="filterBy"
+        :filterMode="filterMode"
+        :isRoot="false"
+        @toggle-expand="id => emit('toggle-expand', id)"
+        @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
       )
-      slot(name="nodeLabel" :node="node")
-        span {{ node.label }}
-    TreeView(
-      v-if="hasChildren(node) && isExpanded(node.id, expandedKeys)"
-      :nodes="node.children"
-      :expandedKeys="expandedKeys"
-      :selectedKeys="selectedKeys"
-      :showCheckbox="showCheckbox"
-      :searchText="searchText"
-      @toggle-expand="id => emit('toggle-expand', id)"
-      @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
-    )
-      template(#togglerIcon="slotProps")
-        slot(name="togglerIcon" v-bind="slotProps")
+        template(#togglerIcon="slotProps")
+          slot(name="togglerIcon" v-bind="slotProps")
 
-      template(#nodeLabel="slotProps")
-        slot(name="nodeLabel" v-bind="slotProps") 
+        template(#nodeLabel="slotProps")
+          slot(name="nodeLabel" v-bind="slotProps") 
+  .no-results(v-else)
+    | No results found for "{{ searchText }}"
 </template>
 
 <style scoped>
@@ -116,5 +159,40 @@ ul.tree(role="tree")
 
 .label {
   cursor: default;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-width: 500px;
+  margin-bottom: 8px;
+  background-color: #fff;
+  transition: box-shadow 0.2s ease;
+}
+
+.search-container:focus-within {
+  box-shadow: 0 0 5px rgba(100, 150, 250, 0.5);
+  border-color: #6496fa;
+}
+
+.search-container input {
+  border: none;
+  outline: none;
+  flex: 1;
+  padding-left: 6px;
+  font-size: 14px;
+}
+
+.search-container svg.search-icon {
+  fill: #888;
+}
+.no-results {
+  padding: 12px;
+  color: #888;
+  font-size: 14px;
+  font-style: italic;
 }
 </style>

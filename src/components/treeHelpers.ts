@@ -66,3 +66,62 @@ export function isPartiallyChecked(node: TreeNode, selectedKeys: string[]): bool
   const checkedCount = descendantIds.filter(id => selectedKeys.includes(id)).length
   return checkedCount > 0 && checkedCount < descendantIds.length
 }
+
+/* filter nodes */
+export function filterTree(nodes: TreeNode[], searchText: string, options?: { filterBy?: string | string[], filterMode?: 'lenient' | 'strict' }): TreeNode[] {
+  if(!searchText) return nodes
+
+  const { filterBy = 'label', filterMode = 'lenient' } = options || {}
+  const fields = Array.isArray(filterBy) ? filterBy : [filterBy]
+  const query = searchText.toLowerCase()
+
+  function recursiveFilter(node: TreeNode): TreeNode | null {
+    const nodeMatches = fields.some(field => {
+      const value = (node as any)[field]
+      return value?.toString().toLowerCase().includes(query)
+    })
+
+    const children: TreeNode[] = []
+    if (node.children?.length) {
+      for (const child of node.children) {
+        const filteredChild = recursiveFilter(child)
+        if (filteredChild) {
+          children.push(filteredChild)
+        }
+      }
+    }
+
+    if (filterMode === 'lenient' && nodeMatches) {
+      return { ...node, children: node.children || [] }
+    }
+
+    if (nodeMatches || children.length > 0) {
+      return { ...node, children }
+    }
+
+    return null
+  }
+  return nodes.map(n => recursiveFilter(n)).filter(Boolean) as TreeNode[]
+}
+
+/* collect expanded ids */
+export function collectExpandedIds(nodes: TreeNode[]): string[] {
+  const ids: string[] = []
+  function walk(list: TreeNode[]) {
+    for (const node of list) {
+      if(node.children && node.children.length > 0) {
+        ids.push(node.id)
+        walk(node.children)
+      }
+    }
+  }
+  walk(nodes)
+  return ids
+}
+
+/* highlight search text */
+export function highlightText(text: string, searchText: string): string {
+  if(!searchText) return text
+  const regex = new RegExp(`(${searchText})`, 'gi')
+  return text.replace(regex, '<mark>$1</mark>')
+}

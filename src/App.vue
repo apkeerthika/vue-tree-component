@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref} from 'vue'
+import { ref, computed } from 'vue'
 import TreeView from './components/TreeView.vue'
 import type { TreeNode } from './types/TreeNode'
 import { treeData } from './data/treeData'
-import { collectDescendantIds, findNodeById } from './components/treeHelpers'
+import { collectDescendantIds, findNodeById, filterTree, collectExpandedIds } from './components/treeHelpers'
 
 const nodes = ref<TreeNode[]>(treeData)
 
@@ -45,24 +45,34 @@ function toggleSelect(id: string, checked: boolean) {
   }
 }
 
+
+
 </script>
 
 <template lang="pug">
-  TreeView(
-    :nodes="nodes"
-    :expandedKeys="expandedKeys"
-    :selectedKeys="selectedKeys"
-    :showCheckbox="true"
-    :expandOnClick="true"
-    @toggle-expand="toggleExpand"
-    @toggle-select="toggleSelect"
-  )
-    template(#togglerIcon="{ node, expanded, toggle }")
-      span.toggle(@click="toggle") {{ expanded ? '−' : '+' }}
+TreeView(
+  :nodes="nodes"
+  :expandedKeys="expandedKeys"
+  :selectedKeys="selectedKeys"
+  :showCheckbox="true"
+  :expandOnClick="true"
+  :filter="true"
+  :isRoot="true"
+  @toggle-expand="toggleExpand"
+  @toggle-select="toggleSelect"
+)
+  template(#togglerIcon="{ node, expanded, toggle }")
+    span.toggle(@click="toggle") {{ expanded ? '−' : '+' }}
 
-    template(#nodeLabel="{ node }")
-      span {{ node.label }}
+  template(#nodeLabel="{ node }")
+    span {{ node.label }}
 
 </template>
+
+<style scoped>
+
+
+</style>
+
 
 
