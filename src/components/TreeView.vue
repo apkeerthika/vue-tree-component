@@ -78,6 +78,10 @@ const showNoResults = computed(() => {
   )
 })
 
+function clearSearch() {
+  searchText.value = ''
+}
+
 
 </script>
 
@@ -85,8 +89,14 @@ const showNoResults = computed(() => {
 .tree-wrapper
   div.search-container(v-if="filter && isRoot")
     input(type="text" placeholder="Search..." v-model="searchText")
-    svg.search-icon(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20")
+    svg.search-icon(v-if="!searchText" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20")
       path(d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z")
+    button.clear-btn(
+      v-if="searchText"
+      type="button"
+      @click="clearSearch"
+      aria-label="Clear search"
+    ) ✕
   ul.tree(role="tree" v-if="!showNoResults")
     li(v-for="node in filteredNodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
       .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
@@ -119,8 +129,9 @@ const showNoResults = computed(() => {
 
         template(#nodeLabel="slotProps")
           slot(name="nodeLabel" v-bind="slotProps") 
-  .no-results(v-else)
-    | No results found for "{{ searchText }}"
+  Transition(name="fade")
+    .no-results(v-if="showNoResults")
+      | No results found for "{{ searchText }}"
 </template>
 
 <style scoped>
@@ -195,4 +206,37 @@ const showNoResults = computed(() => {
   font-size: 14px;
   font-style: italic;
 }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.clear-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #888;
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.clear-btn:hover {
+  color: #333;
+  opacity: 1;
+
+}
+
 </style>
