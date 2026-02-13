@@ -82,6 +82,54 @@ function clearSearch() {
   searchText.value = ''
 }
 
+function countNodes(nodes: TreeNode[]): number {
+  let count = 0
+
+  function traverse(list: TreeNode[]) {
+    for (const node of list) {
+      count++
+      if (node.children?.length) {
+        traverse(node.children)
+      }
+    }
+  }
+
+  traverse(nodes)
+  return count
+}
+
+const resultCount = computed(() => {
+  if (!searchText.value.trim()) return 0
+
+  const search = searchText.value.toLowerCase()
+  const filterBy = props.filterBy ?? 'label'
+  const fields = Array.isArray(filterBy) ? filterBy : [filterBy]
+
+  let count = 0
+
+  function traverse(nodes: TreeNode[]) {
+    for (const node of nodes) {
+      const isMatch = fields.some(field =>
+        String((node as any)[field])
+          ?.toLowerCase()
+          .includes(search)
+      )
+
+      if (isMatch) {
+        count++
+      }
+
+      if (node.children?.length) {
+        traverse(node.children)
+      }
+    }
+  }
+
+  traverse(props.nodes)
+
+  return count
+})
+
 
 </script>
 
@@ -97,6 +145,10 @@ function clearSearch() {
       @click="clearSearch"
       aria-label="Clear search"
     ) ✕
+  div.result-count(
+    v-if="filter && isRoot && searchText"
+  )
+    | {{ resultCount }} result{{ resultCount === 1 ? '' : 's' }} found
   ul.tree(role="tree" v-if="!showNoResults")
     li(v-for="node in filteredNodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
       .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
@@ -131,7 +183,7 @@ function clearSearch() {
           slot(name="nodeLabel" v-bind="slotProps") 
   Transition(name="fade")
     .no-results(v-if="showNoResults")
-      | No results found for "{{ searchText }}"
+       | No results found for "{{ searchText }}"
 </template>
 
 <style scoped>
@@ -237,6 +289,11 @@ function clearSearch() {
   color: #333;
   opacity: 1;
 
+}
+.result-count {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
 }
 
 </style>
