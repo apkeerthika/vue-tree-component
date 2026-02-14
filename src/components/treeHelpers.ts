@@ -68,40 +68,70 @@ export function isPartiallyChecked(node: TreeNode, selectedKeys: string[]): bool
 }
 
 /* filter nodes */
-export function filterTree(nodes: TreeNode[], searchText: string, options?: { filterBy?: string | string[], filterMode?: 'lenient' | 'strict' }): TreeNode[] {
-  if(!searchText) return nodes
+export function filterTree(
+  nodes: TreeNode[],
+  search: string,
+  options: {
+    filterBy: string | string[]
+    filterMode: 'lenient' | 'strict'
+  }
+): TreeNode[] {
 
-  const { filterBy = 'label', filterMode = 'lenient' } = options || {}
-  const fields = Array.isArray(filterBy) ? filterBy : [filterBy]
-  const query = searchText.toLowerCase()
+  console.log('Filter Mode:', options.filterMode)
 
-  function recursiveFilter(node: TreeNode): TreeNode | null {
-    const nodeMatches = fields.some(field => {
-      const value = (node as any)[field]
-      return value?.toString().toLowerCase().includes(query)
-    })
+  const searchLower = search.toLowerCase()
+  const fields = Array.isArray(options.filterBy)
+    ? options.filterBy
+    : [options.filterBy]
 
-    const children: TreeNode[] = []
-    if (node.children?.length) {
-      for (const child of node.children) {
-        const filteredChild = recursiveFilter(child)
-        if (filteredChild) {
-          children.push(filteredChild)
+  function matches(node: TreeNode): boolean {
+    return fields.some(field =>
+      String((node as any)[field])
+        ?.toLowerCase()
+        .includes(searchLower)
+    )
+  }
+
+  function filterNodes(list: TreeNode[]): TreeNode[] {
+    const result: TreeNode[] = []
+
+    for (const node of list) {
+      const isMatch = matches(node)
+
+      if (options.filterMode === 'lenient') {
+        if (isMatch) {
+          result.push({ ...node }) // keep full subtree
+        } else if (node.children) {
+          const filteredChildren = filterNodes(node.children)
+          if (filteredChildren.length) {
+            result.push({
+              ...node,
+              children: filteredChildren
+            })
+          }
+        }
+      }
+
+      if (options.filterMode === 'strict') {
+        let filteredChildren: TreeNode[] = []
+
+        if (node.children) {
+          filteredChildren = filterNodes(node.children)
+        }
+
+        if (isMatch || filteredChildren.length) {
+          result.push({
+            ...node,
+            children: filteredChildren
+          })
         }
       }
     }
 
-    if (filterMode === 'lenient' && nodeMatches) {
-      return { ...node, children: node.children || [] }
-    }
-
-    if (nodeMatches || children.length > 0) {
-      return { ...node, children }
-    }
-
-    return null
+    return result
   }
-  return nodes.map(n => recursiveFilter(n)).filter(Boolean) as TreeNode[]
+
+  return filterNodes(nodes)
 }
 
 /* collect expanded ids */

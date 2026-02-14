@@ -57,6 +57,8 @@ TreeView(
   :showCheckbox="true"
   :expandOnClick="true"
   :filter="true"
+  :filterBy="['label']"
+  :filterMode="'lenient'"
   :isRoot="true"
   @toggle-expand="toggleExpand"
   @toggle-select="toggleSelect"
