@@ -10,13 +10,13 @@ const props = defineProps<{
   nodes: TreeNode[],
   expandedKeys: string[],
   selectedKeys: string[],
-  showCheckbox: boolean,
   filter?: boolean,
   filterBy?: string | string[],
   filterMode?: 'lenient' | 'strict'
   isRoot?: boolean,
   selectionMode?: 'single' | 'multiple',
   expandOnClick?: boolean
+  showCheckbox?: boolean
 }>()
 
 const searchText = ref('')
@@ -221,13 +221,13 @@ function getRowClasses(node: TreeNode) {
         :nodes="node.children"
         :expandedKeys="computedExpandedKeys"
         :selectedKeys="selectedKeys"
-        :showCheckbox="showCheckbox"
         :filter="filter"
         :filterBy="filterBy"
         :filterMode="filterMode"
         :isRoot="false"
-        :selectionMode="mode"
+        :selectionMode=mode
         :expandOnClick="expandOnClick"
+        :showCheckbox="showCheckbox"
         @toggle-expand="id => emit('toggle-expand', id)"
         @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
       )
