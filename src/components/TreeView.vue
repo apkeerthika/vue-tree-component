@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { TreeNode } from '@/types/TreeNode';
-import { isExpanded, isChecked, hasChildren, isIndeterminate, isFullyChecked, isPartiallyChecked, filterTree, collectExpandedIds, highlightText } from '@/components/treeHelpers';
+import { isExpanded, hasChildren, isFullyChecked, filterTree, findPath, isPartiallyChecked } from '@/components/treeHelpers';
 import { vIndeterminate } from '@/directives/indeterminate';
 
 defineOptions({ name: 'TreeView'})
@@ -14,10 +14,14 @@ const props = defineProps<{
   filter?: boolean,
   filterBy?: string | string[],
   filterMode?: 'lenient' | 'strict'
-  isRoot?: boolean
+  isRoot?: boolean,
+  selectionMode?: 'single' | 'multiple',
+  expandOnClick?: boolean
 }>()
 
 const searchText = ref('')
+
+const mode = computed(() => props.selectionMode ?? 'multiple')
 
 
 const emit = defineEmits<{
@@ -31,7 +35,8 @@ function onExpand(node: TreeNode) {
 
 function onCheck(node: TreeNode, e:Event) {
   const target = e.target as HTMLInputElement
-  emit('toggle-select', node.id, target.checked)
+  const checked = mode.value === 'single' ? true : target.checked
+  emit('toggle-select', node.id, checked)
 }
 
 function onKeydown(e: KeyboardEvent, node: TreeNode) {
@@ -67,7 +72,22 @@ const computedExpandedKeys = computed<string[]>(() => {
     return props.expandedKeys
   }
 
-  return collectExpandedIds(filteredNodes.value)
+  const expanded = new Set<string>()
+
+  function collectMatches(nodes: TreeNode[]) {
+    for (const node of nodes) {
+      const path = findPath(props.nodes, node.id)
+
+      path.slice(0, -1).forEach(pathNode => expanded.add(pathNode.id))
+
+      if (node.children?.length) {
+        collectMatches(node.children)
+      }
+    }
+  }
+
+  collectMatches(filteredNodes.value)
+  return Array.from(expanded)
 })
 
 const showNoResults = computed(() => {
@@ -130,6 +150,31 @@ const resultCount = computed(() => {
   return count
 })
 
+function handleRowClick(node: TreeNode, e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT') return
+
+  if (props.selectionMode === 'single') {
+    emit('toggle-select', node.id, true)
+  } else {
+    const checked = !isFullyChecked(node, props.selectedKeys)
+    emit('toggle-select', node.id, checked)
+  }
+}
+
+function getRowClasses(node: TreeNode) {
+  const fully = isFullyChecked(node, props.selectedKeys)
+  const partial = isPartiallyChecked(node, props.selectedKeys)
+
+  return {
+    selected:
+      mode.value === 'single'
+        ? props.selectedKeys.includes(node.id)
+        : fully,
+    partial
+  }
+}
+
 
 </script>
 
@@ -151,13 +196,13 @@ const resultCount = computed(() => {
     | {{ resultCount }} result{{ resultCount === 1 ? '' : 's' }} found
   ul.tree(role="tree" v-if="!showNoResults")
     li(v-for="node in filteredNodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
-      .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
+      .node-row(:class="getRowClasses(node)" tabIndex="0" @keydown="(e) => onKeydown(e, node)", @click="(e) => handleRowClick(node, e)")
         span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") 
           slot(name="togglerIcon" :node="node", :expanded="isExpanded(node.id, computedExpandedKeys)")
             span.default-toggle(:class="{ expanded: isExpanded(node.id, computedExpandedKeys) }")  ▶
         span.toggle(v-else)
 
-        template(v-if="showCheckbox")
+        template(v-if="showCheckbox && mode === 'multiple'")
           input(
             type="checkbox"
             :checked="isFullyChecked(node, selectedKeys)"
@@ -181,6 +226,8 @@ const resultCount = computed(() => {
         :filterBy="filterBy"
         :filterMode="filterMode"
         :isRoot="false"
+        :selectionMode="mode"
+        :expandOnClick="expandOnClick"
         @toggle-expand="id => emit('toggle-expand', id)"
         @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
       )
@@ -208,13 +255,15 @@ const resultCount = computed(() => {
 .node-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .node-row:hover {
-  background-color: #f3f4f6;
+  background: #f3f4f6; /* light gray */
 }
 
 .node-row:focus {
@@ -313,6 +362,16 @@ const resultCount = computed(() => {
 
 .default-toggle.expanded {
   transform: rotate(90deg);
+}
+
+.node-row.selected {
+  background: #e0f2fe;   /* soft blue */
+  color: #0369a1;
+  font-weight: 500;
+}
+
+.node-row.partial {
+  background: #fef9c3; /* soft yellow */
 }
 
 </style>

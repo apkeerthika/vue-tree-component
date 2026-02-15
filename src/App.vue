@@ -3,9 +3,14 @@ import { ref, computed } from 'vue'
 import TreeView from './components/TreeView.vue'
 import type { TreeNode } from './types/TreeNode'
 import { treeData } from './data/treeData'
-import { collectDescendantIds, findNodeById, filterTree, collectExpandedIds } from './components/treeHelpers'
+import { collectDescendantIds, findNodeById, filterTree, collectExpandedIds, findPath } from './components/treeHelpers'
 
 const nodes = ref<TreeNode[]>(treeData)
+
+const selectionMode = ref<'single' | 'multiple'>('single')
+const expandOnClick = ref(false)
+const tempSelectedNode = ref<TreeNode | null>(null)
+
 
 const expandedKeys = ref<string[]>([])
 const selectedKeys = ref<string[]>([])
@@ -19,30 +24,45 @@ function toggleExpand(id: string) {
   }
 }
 
-function toggleSelect(id: string, checked: boolean) {
-  const node = findNodeById(nodes.value, id)
-  if (!node) return
+function handleToggleSelect(id: string, checked: boolean) {
+  if (selectionMode.value === 'single') {
+    selectedKeys.value = [id]
 
-  if (node.skipInheritance) {
-    if (checked && !selectedKeys.value.includes(id)) {
-      selectedKeys.value.push(id)
-    } else if (!checked && selectedKeys.value.includes(id)) {
-      selectedKeys.value = selectedKeys.value.filter(k => k !== id)
-    }
+    const node = findNodeById(nodes.value, id)
+    tempSelectedNode.value = node || null
     return
   }
 
+  // MULTIPLE MODE (cascade)
+  const node = findNodeById(nodes.value, id)
+  if (!node) return
+
   const descendantIds = collectDescendantIds(node)
-  const ids = [id, ...descendantIds]
+  const path = findPath(nodes.value, id)
+
+  const newSelected = new Set(selectedKeys.value)
+
   if (checked) {
-    ids.forEach(i => {
-      if(!selectedKeys.value.includes(i)) {
-        selectedKeys.value.push(i)
-      }
-    })
+    newSelected.add(id)
+    descendantIds.forEach(d => newSelected.add(d))
   } else {
-    selectedKeys.value= selectedKeys.value.filter(k => !ids.includes(k))
+    newSelected.delete(id)
+    descendantIds.forEach(d => newSelected.delete(d))
   }
+
+  // Update parents
+  path.slice(0, -1).reverse().forEach(parent => {
+    const childIds = collectDescendantIds(parent)
+    const allSelected = childIds.every(c => newSelected.has(c))
+
+    if (allSelected) {
+      newSelected.add(parent.id)
+    } else {
+      newSelected.delete(parent.id)
+    }
+  })
+
+  selectedKeys.value = Array.from(newSelected)
 }
 
 
@@ -50,23 +70,31 @@ function toggleSelect(id: string, checked: boolean) {
 </script>
 
 <template lang="pug">
+button(@click="selectionMode = 'single'") Single
+button(@click="selectionMode = 'multiple'") Multiple
 TreeView(
   :nodes="nodes"
   :expandedKeys="expandedKeys"
   :selectedKeys="selectedKeys"
-  :showCheckbox="true"
+  :showCheckbox="selectionMode === 'multiple'"
   :filter="true"
   :filterBy="['label']"
   :filterMode="'lenient'"
   :isRoot="true"
+  :selectionMode="selectionMode"
+  :expandOnClick="expandOnClick"
   @toggle-expand="toggleExpand"
-  @toggle-select="toggleSelect"
+  @toggle-select="handleToggleSelect"
 )
   template(#togglerIcon="{ node, expanded }")
     span.toggle {{ expanded ? '-' : '+' }}
 
   template(#nodeLabel="{ node }")
     span {{ node.label }}
+
+div(v-if="tempSelectedNode")
+  h3 Selected Node:
+  pre {{ tempSelectedNode }}
 
 </template>
 

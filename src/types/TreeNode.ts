@@ -6,4 +6,5 @@ export interface TreeNode {
     // Child nodes
     children?: TreeNode[];
     skipInheritance?: boolean;
+    inheritRules?: boolean;
 }
