@@ -55,7 +55,6 @@ TreeView(
   :expandedKeys="expandedKeys"
   :selectedKeys="selectedKeys"
   :showCheckbox="true"
-  :expandOnClick="true"
   :filter="true"
   :filterBy="['label']"
   :filterMode="'lenient'"
@@ -63,8 +62,8 @@ TreeView(
   @toggle-expand="toggleExpand"
   @toggle-select="toggleSelect"
 )
-  template(#togglerIcon="{ node, expanded, toggle }")
-    span.toggle(@click="toggle") {{ expanded ? '−' : '+' }}
+  template(#togglerIcon="{ node, expanded }")
+    span.toggle {{ expanded ? '-' : '+' }}
 
   template(#nodeLabel="{ node }")
     span {{ node.label }}

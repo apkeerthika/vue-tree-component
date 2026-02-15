@@ -152,15 +152,23 @@ const resultCount = computed(() => {
   ul.tree(role="tree" v-if="!showNoResults")
     li(v-for="node in filteredNodes || []" :key="node.id" role="treeitem" :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
       .node-row(tabIndex="0" @keydown="(e) => onKeydown(e, node)")
-        span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") {{ isExpanded(node.id, computedExpandedKeys) ? '-' : '+' }}
+        span.toggle(v-if="hasChildren(node)" role="button" aria-label="Toggle" @click="onExpand(node)") 
+          slot(name="togglerIcon" :node="node", :expanded="isExpanded(node.id, computedExpandedKeys)")
+            span.default-toggle(:class="{ expanded: isExpanded(node.id, computedExpandedKeys) }")  ▶
+        span.toggle(v-else)
 
-        input(
-          v-if="showCheckbox" 
-          type="checkbox" 
-          :checked="isFullyChecked(node, selectedKeys)" 
-          v-indeterminate="isPartiallyChecked(node, selectedKeys)"
-          @change="onCheck(node, $event)"
-        )
+        template(v-if="showCheckbox")
+          input(
+            type="checkbox"
+            :checked="isFullyChecked(node, selectedKeys)"
+            v-indeterminate="isPartiallyChecked(node, selectedKeys)"
+            @change="onCheck(node, $event)"
+          )
+
+        template(v-else)
+          slot(name="nodeIcon" :node="node")
+            span.default-icon
+              | {{ hasChildren(node) ? '📁' : '📄' }}
         slot(name="nodeLabel" :node="node")
           span(v-html="highlightText(node.label, searchText)")
       TreeView(
@@ -294,6 +302,17 @@ const resultCount = computed(() => {
   font-size: 13px;
   color: #666;
   margin-bottom: 6px;
+}
+
+
+.default-toggle {
+  display: inline-block;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.default-toggle.expanded {
+  transform: rotate(90deg);
 }
 
 </style>
