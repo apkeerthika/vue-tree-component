@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { TreeNode } from '@/types/TreeNode';
-import { isExpanded, hasChildren, isFullyChecked, filterTree, findPath, isPartiallyChecked } from '@/components/treeHelpers';
+import { isExpanded, hasChildren,  isFullyChecked, isPartiallyChecked, highlightText } from '@/components/treeHelpers';
 import { vIndeterminate } from '@/directives/indeterminate';
+import { useTreeFilter } from '@/composables/useTreeFilter'
+
 
 defineOptions({ name: 'TreeView'})
 
@@ -19,14 +21,14 @@ const props = defineProps<{
   showCheckbox?: boolean
 }>()
 
-const searchText = ref('')
+const { searchText, filteredNodes, computedExpandedKeys, showNoResults, resultCount, clearSearch } = useTreeFilter(props)
 
 const mode = computed(() => props.selectionMode ?? 'multiple')
 
 
 const emit = defineEmits<{
   'toggle-expand': [id: string],
-  'toggle-select': [id: string, checked: boolean]
+  'toggle-select': [node: TreeNode, checked: boolean]
 }>()
 
 function onExpand(node: TreeNode) {
@@ -36,7 +38,7 @@ function onExpand(node: TreeNode) {
 function onCheck(node: TreeNode, e:Event) {
   const target = e.target as HTMLInputElement
   const checked = mode.value === 'single' ? true : target.checked
-  emit('toggle-select', node.id, checked)
+  emit('toggle-select', node, checked)
 }
 
 function onKeydown(e: KeyboardEvent, node: TreeNode) {
@@ -56,122 +58,26 @@ function onKeydown(e: KeyboardEvent, node: TreeNode) {
   }
 }
 
-const filteredNodes = computed<TreeNode[]>(() => {
-  if (!props.filter || !searchText.value.trim()) {
-    return props.nodes
-  }
-
-  return filterTree(props.nodes, searchText.value, {
-    filterBy: props.filterBy ?? 'label',
-    filterMode: props.filterMode ?? 'lenient'
-  })
-})
-
-const computedExpandedKeys = computed<string[]>(() => {
-  if (!searchText.value.trim()) {
-    return props.expandedKeys
-  }
-
-  const expanded = new Set<string>()
-
-  function collectMatches(nodes: TreeNode[]) {
-    for (const node of nodes) {
-      const path = findPath(props.nodes, node.id)
-
-      path.slice(0, -1).forEach(pathNode => expanded.add(pathNode.id))
-
-      if (node.children?.length) {
-        collectMatches(node.children)
-      }
-    }
-  }
-
-  collectMatches(filteredNodes.value)
-  return Array.from(expanded)
-})
-
-const showNoResults = computed(() => {
-  return (
-    props.filter &&
-    searchText.value.trim().length > 0 &&
-    filteredNodes.value.length === 0
-  )
-})
-
-function clearSearch() {
-  searchText.value = ''
-}
-
-function countNodes(nodes: TreeNode[]): number {
-  let count = 0
-
-  function traverse(list: TreeNode[]) {
-    for (const node of list) {
-      count++
-      if (node.children?.length) {
-        traverse(node.children)
-      }
-    }
-  }
-
-  traverse(nodes)
-  return count
-}
-
-const resultCount = computed(() => {
-  if (!searchText.value.trim()) return 0
-
-  const search = searchText.value.toLowerCase()
-  const filterBy = props.filterBy ?? 'label'
-  const fields = Array.isArray(filterBy) ? filterBy : [filterBy]
-
-  let count = 0
-
-  function traverse(nodes: TreeNode[]) {
-    for (const node of nodes) {
-      const isMatch = fields.some(field =>
-        String((node as any)[field])
-          ?.toLowerCase()
-          .includes(search)
-      )
-
-      if (isMatch) {
-        count++
-      }
-
-      if (node.children?.length) {
-        traverse(node.children)
-      }
-    }
-  }
-
-  traverse(props.nodes)
-
-  return count
-})
-
 function handleRowClick(node: TreeNode, e: MouseEvent) {
-  const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT') return
+  if((e.target as HTMLElement).tagName === 'INPUT') return
 
-  if (props.selectionMode === 'single') {
-    emit('toggle-select', node.id, true)
+  if(mode.value === 'single') {
+    emit('toggle-select', node, true)
   } else {
     const checked = !isFullyChecked(node, props.selectedKeys)
-    emit('toggle-select', node.id, checked)
+    emit('toggle-select', node, checked)
   }
 }
 
 function getRowClasses(node: TreeNode) {
-  const fully = isFullyChecked(node, props.selectedKeys)
-  const partial = isPartiallyChecked(node, props.selectedKeys)
-
+  if(mode.value === 'single') {
+    return {
+      selected: props.selectedKeys.includes(node.id)
+    }
+  }
   return {
-    selected:
-      mode.value === 'single'
-        ? props.selectedKeys.includes(node.id)
-        : fully,
-    partial
+    selected: isFullyChecked(node, props.selectedKeys),
+    partial: isPartiallyChecked(node, props.selectedKeys)
   }
 }
 
@@ -225,11 +131,11 @@ function getRowClasses(node: TreeNode) {
         :filterBy="filterBy"
         :filterMode="filterMode"
         :isRoot="false"
-        :selectionMode=mode
+        :selectionMode="mode"
         :expandOnClick="expandOnClick"
         :showCheckbox="showCheckbox"
         @toggle-expand="id => emit('toggle-expand', id)"
-        @toggle-select="(id, checked) => emit('toggle-select', id, checked)"
+        @toggle-select="(node, checked) => emit('toggle-select', node, checked)"
       )
         template(#togglerIcon="slotProps")
           slot(name="togglerIcon" v-bind="slotProps")

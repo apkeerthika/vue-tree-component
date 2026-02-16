@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/language-plugin-pug": "^3.0.3",
     "@vue/tsconfig": "^0.8.1",
     "eslint-plugin-vue": "^10.7.0",
     "pug": "^3.0.3",

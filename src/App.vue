@@ -3,17 +3,20 @@ import { ref, computed } from 'vue'
 import TreeView from './components/TreeView.vue'
 import type { TreeNode } from './types/TreeNode'
 import { treeData } from './data/treeData'
-import { collectDescendantIds, findNodeById, filterTree, collectExpandedIds, findPath } from './components/treeHelpers'
+import { useTreeSelection } from './composables/useTreeSelection'
 
 const nodes = ref<TreeNode[]>(treeData)
 
-const selectionMode = ref<'single' | 'multiple'>('single')
 const expandOnClick = ref(false)
-const tempSelectedNode = ref<TreeNode | null>(null)
-const tempSelectedNodes = ref<TreeNode[]>([])
-
 const expandedKeys = ref<string[]>([])
-const selectedKeys = ref<string[]>([])
+
+const {
+  selectionMode,
+  selectedKeys,
+  tempSelectedNode,
+  tempSelectedNodes,
+  toggleSelect
+} = useTreeSelection(nodes)
 
 function toggleExpand(id: string) {
   const i = expandedKeys.value.indexOf(id)
@@ -24,56 +27,8 @@ function toggleExpand(id: string) {
   }
 }
 
-function handleToggleSelect(id: string, checked: boolean) {
-  const node = findNodeById(nodes.value, id)
-  if (!node) return
-
-  if (selectionMode.value === 'single') {
-    selectedKeys.value = [id]
-    tempSelectedNode.value = node || null
-    tempSelectedNodes.value = []
-    return
-  }
-
-  // MULTIPLE MODE (cascade)
-  const descendantIds = collectDescendantIds(node)
-  const path = findPath(nodes.value, id)
-
-  const newSelected = new Set(selectedKeys.value)
-
-  if (checked) {
-    newSelected.add(id)
-    descendantIds.forEach(d => newSelected.add(d))
-
-    const toAdd = [node, ...descendantIds.map(id => findNodeById(nodes.value, id))].filter((n): n is TreeNode => !!n)
-    toAdd.forEach(n => {
-      if(!tempSelectedNodes.value.find(existing => existing.id === n.id)) {
-        tempSelectedNodes.value.push(n)
-      }
-    })
-  } else {
-    newSelected.delete(id)
-    descendantIds.forEach(d => newSelected.delete(d))
-
-    const toRemoveIds = [node, ...descendantIds]
-    tempSelectedNodes.value = tempSelectedNodes.value.filter(n => !toRemoveIds.includes(n.id))
-  }
-
-  // Update parents
-  path.slice(0, -1).reverse().forEach(parent => {
-    const childIds = collectDescendantIds(parent)
-    const selectedChildren = childIds.filter(c => newSelected.has(c))
-
-    if (selectedChildren.length === childIds.length) {
-      newSelected.add(parent.id)
-    } else if(selectedChildren.length > 0) {
-      newSelected.add(parent.id)
-    } else {
-      newSelected.delete(parent.id)
-    }
-  })
-
-  selectedKeys.value = Array.from(newSelected)
+function handleToggleSelect(node: TreeNode, checked: boolean) {
+  toggleSelect(node, checked)
 }
 
 
