@@ -1,0 +1,25 @@
+/* Fade animation (used for no results) */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* Expand animation */
+
+.tree-expand-enter-active,
+.tree-expand-leave-active {
+  transition: all 0.2s ease;
+}
+
+.tree-expand-enter-from,
+.tree-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}

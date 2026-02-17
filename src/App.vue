@@ -22,12 +22,20 @@ const { expandedKeys, toggleExpand } = useTreeExpansion(nodes)
 </script>
 
 <template lang="pug">
-button(@click="selectionMode = 'single'") Single
-button(@click="selectionMode = 'multiple'") Multiple
-label
+div.mode-switch
+  button(
+    :class="{ active: selectionMode === 'single' }"
+    @click="selectionMode = 'single'"
+  ) Single
+
+  button(
+    :class="{ active: selectionMode === 'multiple' }"
+    @click="selectionMode = 'multiple'"
+  ) Multiple
+
+label.inheritance-toggle(v-if="selectionMode === 'multiple'")
   input(type="checkbox" v-model="inheritRules")
   | Enable Inheritance
-
 TreeView(
   :nodes="nodes"
   :expandedKeys="expandedKeys"
@@ -57,18 +65,6 @@ div(v-if="selectionMode === 'multiple' && tempSelectedNodes.length")
     li(v-for="n in tempSelectedNodes" :key="n.id") {{ n.label }}
 
 </template>
-
-<style scoped>
-button {
-  margin-right: 8px;
-  margin-bottom: 12px;
-}
-.toggle {
-  font-weight: bold;
-  cursor: pointer;
-  margin-right: 4px;
-}
-</style>
 
 
 

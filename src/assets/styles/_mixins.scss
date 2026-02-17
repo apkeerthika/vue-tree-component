@@ -1,0 +1,33 @@
+@use './variables' as *;
+
+/* Smooth transition */
+@mixin smooth {
+  transition: all $tree-transition;
+}
+
+/* Hover effect */
+@mixin hover-bg {
+  &:hover {
+    background: $tree-hover-bg;
+  }
+}
+
+/* Focus ring */
+@mixin focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px $tree-focus-ring;
+  }
+}
+
+/* Selected state */
+@mixin selected-state {
+  background: $tree-selected-bg;
+  border-left: 3px solid $tree-selected-border;
+}
+
+/* Partial state */
+@mixin partial-state {
+  background: $tree-partial-bg;
+  border-left: 3px solid $tree-partial-border;
+}

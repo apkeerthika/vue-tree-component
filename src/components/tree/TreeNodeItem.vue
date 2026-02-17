@@ -13,7 +13,8 @@ const props = defineProps<{
   computedExpandedKeys?: string[]
   searchText?: string
   selectionMode?: 'single' | 'multiple'
-  showCheckbox?: boolean
+  showCheckbox?: boolean,
+  level?: number
 }>()
 
 const emit = defineEmits<{
@@ -79,6 +80,7 @@ function getRowClasses() {
 li(role="treeitem", :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
   .node-row(
     :class="getRowClasses()"
+    :style="{ paddingLeft: `${(level ?? 0) * 16}px` }"
     tabIndex="0"
     @keydown="onKeydown"
     @click="handleRowClick"
@@ -90,7 +92,14 @@ li(role="treeitem", :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
       @click.stop="onExpand"
     )
       slot(name="togglerIcon", :node="node", :expanded="isExpanded(node.id, computedExpandedKeys)")
-        span.default-toggle(:class="{ expanded: isExpanded(node.id, computedExpandedKeys) }") ▶
+        svg(
+          class="chevron"
+          :class="{ expanded }"
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+        )
+          path(d="M8 5l8 7-8 7" fill="currentColor")
     span.toggle(v-else)
 
     template(v-if="showCheckbox && mode === 'multiple'")
@@ -122,6 +131,7 @@ li(role="treeitem", :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
       :showCheckbox="props.showCheckbox"
       @toggle-expand="$emit('toggle-expand', $event)"
       @toggle-select="(node, checked) => $emit('toggle-select', node, checked)"
+      :level="(level ?? 0) + 1"
     )
       template(#togglerIcon="slotProps")
         slot(name="togglerIcon" v-bind="slotProps")
@@ -130,67 +140,3 @@ li(role="treeitem", :aria-expanded="isExpanded(node.id, computedExpandedKeys)")
         slot(name="nodeLabel" v-bind="slotProps")
 </template>
 
-<style scoped>
-li {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.node-row + ul {
-  list-style: none;
-  padding-left: 16px; /* indentation for child nodes */
-  margin: 0;
-}
-
-.toggle {
-  cursor: pointer;
-  width: 16px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.default-toggle {
-  display: inline-block;
-  font-size: 12px;
-  transition: transform 0.2s ease;
-}
-
-.default-toggle.expanded {
-  transform: rotate(90deg);
-}
-
-.node-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.node-row:hover {
-  background: #f1f5f9;
-}
-
-.node-row.selected {
-  background: #dbeafe;
-  color: #1e40af;
-  font-weight: 500;
-  box-shadow: inset 0 0 0 1px #93c5fd;
-}
-
-.node-row.partial {
-  background: #fef3c7;
-}
-
-.node-row:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px #3b82f6;
-}
-
-.default-icon {
-  width: 18px;
-  text-align: center;
-}
-</style>

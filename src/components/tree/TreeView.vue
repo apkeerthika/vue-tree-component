@@ -42,7 +42,7 @@ const mode = computed(() => props.selectionMode ?? 'multiple')
 </script>
 
 <template lang="pug">
-.tree-wrapper
+.tree-wrapper.tree
   div.search-container(v-if="filter && isRoot")
     input(
       type="text"
@@ -95,83 +95,3 @@ const mode = computed(() => props.selectionMode ?? 'multiple')
       | No results found for "{{ searchText }}"
 </template>
 
-<style scoped>
-.tree {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.search-container {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  max-width: 500px;
-  margin-bottom: 8px;
-  background-color: #fff;
-  transition: box-shadow 0.2s ease;
-}
-
-.search-container:focus-within {
-  box-shadow: 0 0 5px rgba(100, 150, 250, 0.5);
-  border-color: #6496fa;
-}
-
-.search-container input {
-  border: none;
-  outline: none;
-  flex: 1;
-  padding-left: 6px;
-  font-size: 14px;
-}
-
-.search-container svg.search-icon {
-  fill: #888;
-}
-
-.no-results {
-  padding: 12px;
-  color: #888;
-  font-size: 14px;
-  font-style: italic;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.25s ease;
-}
-
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.clear-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #888;
-  padding: 0 4px;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.clear-btn:hover {
-  color: #333;
-  opacity: 1;
-}
-
-.result-count {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 6px;
-}
-</style>
