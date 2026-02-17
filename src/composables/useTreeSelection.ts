@@ -1,45 +1,73 @@
-import { ref, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import type { TreeNode } from '@/types/TreeNode'
-import { collectDescendantIds, findNodeById, findPath } from '@/components/treeHelpers'
+import { findPath, collectDescendantIds } from '@/components/helpers/treeHelpers'
 
-export function useTreeSelection(nodes: Ref<TreeNode[]>) {
-  const selectionMode = ref<'single' | 'multiple'>('single')
+export function useTreeSelection(
+  nodes: Ref<TreeNode[]>
+) {
+  const selectionMode = ref<'single' | 'multiple'>('multiple')
+  const inheritRules = ref(true)
   const selectedKeys = ref<string[]>([])
-  const tempSelectedNode = ref<TreeNode | null>(null)
-  const tempSelectedNodes = ref<TreeNode[]>([])
 
-  function isFullyChecked(node: TreeNode): boolean {
-    if (!node.children?.length) {
-      return selectedKeys.value.includes(node.id)
+  const nodeMap = computed(() => {
+    const map = new Map<string, TreeNode>()
+
+    function traverse(list: TreeNode[]) {
+      for (const node of list) {
+        map.set(node.id, node)
+        if (node.children?.length) {
+          traverse(node.children)
+        }
+      }
     }
 
-    const ids = collectDescendantIds(node)
-    return ids.every(id => selectedKeys.value.includes(id))
-  }
+    traverse(nodes.value)
+    return map
+  })
 
-  function isPartiallyChecked(node: TreeNode): boolean {
-    if (!node.children?.length) return false
+  const tempSelectedNodes = computed(() =>
+    selectedKeys.value
+      .map(id => nodeMap.value.get(id))
+      .filter((n): n is TreeNode => !!n)
+  )
 
-    const ids = collectDescendantIds(node)
-    const selectedChildren = ids.filter(id => selectedKeys.value.includes(id))
+  const tempSelectedNode = computed(() => {
+    if (
+      selectionMode.value !== 'single' ||
+      !selectedKeys.value.length
+    ) {
+      return null
+    }
 
-    return selectedChildren.length > 0 && selectedChildren.length < ids.length
-  }
+  const id = selectedKeys.value[0]
+  return nodeMap.value.get(id) ?? null
+})
 
-  function toggleSelect(node: TreeNode, checked: boolean) {
+  function toggleSelect(node: TreeNode | undefined, checked: boolean = true) {
+    if (!node) return
     const id = node.id
 
     if (selectionMode.value === 'single') {
       selectedKeys.value = [id]
-      tempSelectedNode.value = node
-      tempSelectedNodes.value = []
       return
     }
 
-    // MULTIPLE MODE
-    const descendantIds = collectDescendantIds(node)
-    const path = findPath(nodes.value, id)
     const newSelected = new Set(selectedKeys.value)
+
+    const shouldCascade =
+      inheritRules.value && !node.skipInheritance
+    if (!shouldCascade) {
+      if (checked) {
+        newSelected.add(id)
+      } else {
+        newSelected.delete(id)
+      }
+
+      selectedKeys.value = Array.from(newSelected)
+      return
+    }
+
+    const descendantIds = collectDescendantIds(node)
 
     if (checked) {
       newSelected.add(id)
@@ -49,10 +77,15 @@ export function useTreeSelection(nodes: Ref<TreeNode[]>) {
       descendantIds.forEach(d => newSelected.delete(d))
     }
 
-    // update parents (ONLY fully selected parents)
+    const path = findPath(nodes.value, id) ?? []
+
     path.slice(0, -1).reverse().forEach(parent => {
+      if (parent.skipInheritance) return
+
       const childIds = collectDescendantIds(parent)
-      const allSelected = childIds.every(c => newSelected.has(c))
+      const allSelected = childIds.every(c =>
+        newSelected.has(c)
+      )
 
       if (allSelected) {
         newSelected.add(parent.id)
@@ -62,18 +95,14 @@ export function useTreeSelection(nodes: Ref<TreeNode[]>) {
     })
 
     selectedKeys.value = Array.from(newSelected)
-    tempSelectedNodes.value = selectedKeys.value
-        .map(id => findNodeById(nodes.value, id))
-        .filter((n): n is TreeNode => !!n)
   }
 
   return {
     selectionMode,
+    inheritRules,
     selectedKeys,
     tempSelectedNode,
     tempSelectedNodes,
-    isFullyChecked,
-    isPartiallyChecked,
     toggleSelect
   }
 }
